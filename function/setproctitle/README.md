@@ -1,4 +1,4 @@
-etProcTittle
+SetProcTittle
 =========
 
 SetProcTittle can change the Process Name.Just Copy from Nginx.Just for study.
