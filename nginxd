@@ -1,0 +1,36 @@
+#!/bin/sh
+
+nginx="/root/github/nginx-study/nginx/sbin/nginx"
+
+start(){
+	$nginx
+	echo "Starting nginx:                                           [  OK  ]"
+}
+
+stop(){
+	kill -quit `cat /root/github/nginx-study/nginx/logs/nginx.pid`
+	if(($?));then exit 0; fi	
+	echo "Stopping nginx:                                           [  OK  ]"
+}
+
+restart(){
+	stop
+	sleep 1
+	start
+}
+
+case $1 in
+	"start")
+		start
+	;;
+
+	"restart")
+		restart
+	;;
+
+	"stop")
+		stop
+	;;
+esac
+
+exit 0

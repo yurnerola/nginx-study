@@ -1,4 +1,4 @@
-#define NGX_CONFIGURE " --add-module=third_module/echo-nginx-module --with-debug --with-http_addition_module --add-module=third_module/nginx-hello-world-module/ --with-http_realip_module --prefix=../nginx"
+#define NGX_CONFIGURE " --add-module=third_module/echo-nginx-module --with-debug --with-http_addition_module --add-module=third_module/nginx-hello-world-module/ --with-http_realip_module --with-http_perl_module --prefix=/root/github/nginx-study/nginx/"
 
 #ifndef NGX_DEBUG
 #define NGX_DEBUG  1
@@ -338,8 +338,13 @@
 #endif
 
 
+#ifndef NGX_HAVE_PERL_MULTIPLICITY
+#define NGX_HAVE_PERL_MULTIPLICITY  1
+#endif
+
+
 #ifndef NGX_PREFIX
-#define NGX_PREFIX  "../nginx/"
+#define NGX_PREFIX  "/root/github/nginx-study/nginx//"
 #endif
 
 

@@ -4,6 +4,8 @@ CFLAGS =  -pipe  -O -W -Wall -Wpointer-arith -Wno-unused-parameter -Werror -g
 CPP =	cc -E
 LINK =	$(CC)
 
+NGX_PERL_CFLAGS = -pipe -O -W -Wall -Wpointer-arith -Wno-unused-parameter -Werror -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing -pipe -fstack-protector -I/usr/local/include -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/lib/perl5/CORE
+NGX_PM_CFLAGS = -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing -pipe -fstack-protector -I/usr/local/include -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/lib/perl5/CORE
 
 ALL_INCS = -I src/core \
 	-I src/event \
@@ -12,6 +14,7 @@ ALL_INCS = -I src/core \
 	-I objs \
 	-I src/http \
 	-I src/http/modules \
+	-I src/http/modules/perl \
 	-I src/mail
 
 
@@ -90,11 +93,13 @@ HTTP_DEPS = src/http/ngx_http.h \
 	src/http/ngx_http_upstream.h \
 	src/http/ngx_http_upstream_round_robin.h \
 	src/http/ngx_http_busy_lock.h \
-	src/http/modules/ngx_http_ssi_filter_module.h
+	src/http/modules/ngx_http_ssi_filter_module.h \
+	src/http/modules/perl/ngx_http_perl_module.h
 
 
 HTTP_INCS = -I src/http \
-	-I src/http/modules
+	-I src/http/modules \
+	-I src/http/modules/perl
 
 
 ADDON_DEPS = $(CORE_DEPS)  third_module/echo-nginx-module/src/ngx_http_echo_module.h third_module/echo-nginx-module/src/ddebug.h third_module/echo-nginx-module/src/ngx_http_echo_handler.h third_module/echo-nginx-module/src/ngx_http_echo_util.h third_module/echo-nginx-module/src/ngx_http_echo_sleep.h third_module/echo-nginx-module/src/ngx_http_echo_filter.h third_module/echo-nginx-module/src/ngx_http_echo_var.h third_module/echo-nginx-module/src/ngx_http_echo_location.h third_module/echo-nginx-module/src/ngx_http_echo_echo.h third_module/echo-nginx-module/src/ngx_http_echo_request_info.h third_module/echo-nginx-module/src/ngx_http_echo_subrequest.h third_module/echo-nginx-module/src/ngx_http_echo_foreach.h $(HTTP_DEPS)
@@ -203,6 +208,7 @@ objs/nginx:	objs/src/core/nginx.o \
 	objs/src/http/modules/ngx_http_fastcgi_module.o \
 	objs/src/http/modules/ngx_http_uwsgi_module.o \
 	objs/src/http/modules/ngx_http_scgi_module.o \
+	objs/src/http/modules/perl/ngx_http_perl_module.o \
 	objs/src/http/modules/ngx_http_memcached_module.o \
 	objs/src/http/modules/ngx_http_empty_gif_module.o \
 	objs/src/http/modules/ngx_http_browser_module.o \
@@ -222,7 +228,8 @@ objs/nginx:	objs/src/core/nginx.o \
 	objs/addon/src/ngx_http_echo_subrequest.o \
 	objs/addon/src/ngx_http_echo_foreach.o \
 	objs/addon/nginx-hello-world-module/ngx_http_hello_world_module.o \
-	objs/ngx_modules.o
+	objs/ngx_modules.o \
+	objs/src/http/modules/perl/blib/arch/auto/nginx/nginx.so
 
 	$(LINK) -o objs/nginx \
 	objs/src/core/nginx.o \
@@ -328,6 +335,7 @@ objs/nginx:	objs/src/core/nginx.o \
 	objs/src/http/modules/ngx_http_fastcgi_module.o \
 	objs/src/http/modules/ngx_http_uwsgi_module.o \
 	objs/src/http/modules/ngx_http_scgi_module.o \
+	objs/src/http/modules/perl/ngx_http_perl_module.o \
 	objs/src/http/modules/ngx_http_memcached_module.o \
 	objs/src/http/modules/ngx_http_empty_gif_module.o \
 	objs/src/http/modules/ngx_http_browser_module.o \
@@ -348,7 +356,8 @@ objs/nginx:	objs/src/core/nginx.o \
 	objs/addon/src/ngx_http_echo_foreach.o \
 	objs/addon/nginx-hello-world-module/ngx_http_hello_world_module.o \
 	objs/ngx_modules.o \
-	-lpthread -lcrypt -lpcre -lcrypto -lcrypto -lz
+	-lpthread -lcrypt -lpcre -lcrypto -lcrypto -lz \
+	-Wl,-E -Wl,-rpath,/usr/lib/perl5/CORE -fstack-protector -L/usr/local/lib -L/usr/lib/perl5/CORE -lperl -lresolv -lnsl -ldl -lm -lcrypt -lutil -lpthread -lc
 	
 
 
@@ -1080,6 +1089,13 @@ objs/src/http/modules/ngx_http_scgi_module.o:	$(CORE_DEPS) $(HTTP_DEPS) \
 		src/http/modules/ngx_http_scgi_module.c
 
 
+objs/src/http/modules/perl/ngx_http_perl_module.o:	$(CORE_DEPS) $(HTTP_DEPS) \
+	src/http/modules/perl/ngx_http_perl_module.c
+	$(CC) -c $(NGX_PERL_CFLAGS)  $(CORE_INCS) $(HTTP_INCS) \
+		-o objs/src/http/modules/perl/ngx_http_perl_module.o \
+		src/http/modules/perl/ngx_http_perl_module.c
+
+
 objs/src/http/modules/ngx_http_memcached_module.o:	$(CORE_DEPS) $(HTTP_DEPS) \
 	src/http/modules/ngx_http_memcached_module.c
 	$(CC) -c $(CFLAGS) $(CORE_INCS) $(HTTP_INCS) \
@@ -1213,50 +1229,83 @@ objs/addon/nginx-hello-world-module/ngx_http_hello_world_module.o:	$(ADDON_DEPS)
 		third_module/nginx-hello-world-module//ngx_http_hello_world_module.c
 
 
+objs/src/http/modules/perl/blib/arch/auto/nginx/nginx.so: \
+		$(CORE_DEPS) $(HTTP_DEPS) \
+		src/http/modules/perl/ngx_http_perl_module.h \
+		objs/src/http/modules/perl/Makefile
+	cd objs/src/http/modules/perl && $(MAKE)
+
+	rm -rf objs/install_perl
+
+
+objs/src/http/modules/perl/Makefile: \
+		src/core/nginx.h \
+		src/http/modules/perl/Makefile.PL \
+		src/http/modules/perl/nginx.pm \
+		src/http/modules/perl/nginx.xs \
+		src/http/modules/perl/typemap
+	sed "s/%%VERSION%%/1.4.2/" src/http/modules/perl/nginx.pm > \
+		objs/src/http/modules/perl/nginx.pm
+	cp -p src/http/modules/perl/nginx.xs objs/src/http/modules/perl/
+	cp -p src/http/modules/perl/typemap objs/src/http/modules/perl/
+	cp -p src/http/modules/perl/Makefile.PL objs/src/http/modules/perl/
+
+	cd objs/src/http/modules/perl \
+		&& NGX_PM_CFLAGS="$(NGX_PM_CFLAGS) -g " \
+			NGX_INCS="src/core src/event src/event/modules src/os/unix  objs src/http src/http/modules src/http/modules/perl" \
+			NGX_DEPS="$(CORE_DEPS) $(HTTP_DEPS)" \
+		perl Makefile.PL \
+			LIB= \
+			INSTALLSITEMAN3DIR=
+
+
+install_perl_modules:
+	cd objs/src/http/modules/perl && $(MAKE) install
+
 manpage:	objs/nginx.8
 
 objs/nginx.8:	man/nginx.8 objs/ngx_auto_config.h
-	sed -e "s|%%PREFIX%%|../nginx|" \
-		-e "s|%%PID_PATH%%|../nginx/logs/nginx.pid|" \
-		-e "s|%%CONF_PATH%%|../nginx/conf/nginx.conf|" \
-		-e "s|%%ERROR_LOG_PATH%%|../nginx/logs/error.log|" \
+	sed -e "s|%%PREFIX%%|/root/github/nginx-study/nginx/|" \
+		-e "s|%%PID_PATH%%|/root/github/nginx-study/nginx//logs/nginx.pid|" \
+		-e "s|%%CONF_PATH%%|/root/github/nginx-study/nginx//conf/nginx.conf|" \
+		-e "s|%%ERROR_LOG_PATH%%|/root/github/nginx-study/nginx//logs/error.log|" \
 		< man/nginx.8 > $@
 
-install:	objs/nginx 		
-	test -d '$(DESTDIR)../nginx' || mkdir -p '$(DESTDIR)../nginx'
+install:	objs/nginx 		install_perl_modules
+	test -d '$(DESTDIR)/root/github/nginx-study/nginx/' || mkdir -p '$(DESTDIR)/root/github/nginx-study/nginx/'
 
-	test -d '$(DESTDIR)../nginx/sbin' 		|| mkdir -p '$(DESTDIR)../nginx/sbin'
-	test ! -f '$(DESTDIR)../nginx/sbin/nginx' 		|| mv '$(DESTDIR)../nginx/sbin/nginx' 			'$(DESTDIR)../nginx/sbin/nginx.old'
-	cp objs/nginx '$(DESTDIR)../nginx/sbin/nginx'
+	test -d '$(DESTDIR)/root/github/nginx-study/nginx//sbin' 		|| mkdir -p '$(DESTDIR)/root/github/nginx-study/nginx//sbin'
+	test ! -f '$(DESTDIR)/root/github/nginx-study/nginx//sbin/nginx' 		|| mv '$(DESTDIR)/root/github/nginx-study/nginx//sbin/nginx' 			'$(DESTDIR)/root/github/nginx-study/nginx//sbin/nginx.old'
+	cp objs/nginx '$(DESTDIR)/root/github/nginx-study/nginx//sbin/nginx'
 
-	test -d '$(DESTDIR)../nginx/conf' 		|| mkdir -p '$(DESTDIR)../nginx/conf'
+	test -d '$(DESTDIR)/root/github/nginx-study/nginx//conf' 		|| mkdir -p '$(DESTDIR)/root/github/nginx-study/nginx//conf'
 
-	cp conf/koi-win '$(DESTDIR)../nginx/conf'
-	cp conf/koi-utf '$(DESTDIR)../nginx/conf'
-	cp conf/win-utf '$(DESTDIR)../nginx/conf'
+	cp conf/koi-win '$(DESTDIR)/root/github/nginx-study/nginx//conf'
+	cp conf/koi-utf '$(DESTDIR)/root/github/nginx-study/nginx//conf'
+	cp conf/win-utf '$(DESTDIR)/root/github/nginx-study/nginx//conf'
 
-	test -f '$(DESTDIR)../nginx/conf/mime.types' 		|| cp conf/mime.types '$(DESTDIR)../nginx/conf'
-	cp conf/mime.types '$(DESTDIR)../nginx/conf/mime.types.default'
+	test -f '$(DESTDIR)/root/github/nginx-study/nginx//conf/mime.types' 		|| cp conf/mime.types '$(DESTDIR)/root/github/nginx-study/nginx//conf'
+	cp conf/mime.types '$(DESTDIR)/root/github/nginx-study/nginx//conf/mime.types.default'
 
-	test -f '$(DESTDIR)../nginx/conf/fastcgi_params' 		|| cp conf/fastcgi_params '$(DESTDIR)../nginx/conf'
-	cp conf/fastcgi_params 		'$(DESTDIR)../nginx/conf/fastcgi_params.default'
+	test -f '$(DESTDIR)/root/github/nginx-study/nginx//conf/fastcgi_params' 		|| cp conf/fastcgi_params '$(DESTDIR)/root/github/nginx-study/nginx//conf'
+	cp conf/fastcgi_params 		'$(DESTDIR)/root/github/nginx-study/nginx//conf/fastcgi_params.default'
 
-	test -f '$(DESTDIR)../nginx/conf/fastcgi.conf' 		|| cp conf/fastcgi.conf '$(DESTDIR)../nginx/conf'
-	cp conf/fastcgi.conf '$(DESTDIR)../nginx/conf/fastcgi.conf.default'
+	test -f '$(DESTDIR)/root/github/nginx-study/nginx//conf/fastcgi.conf' 		|| cp conf/fastcgi.conf '$(DESTDIR)/root/github/nginx-study/nginx//conf'
+	cp conf/fastcgi.conf '$(DESTDIR)/root/github/nginx-study/nginx//conf/fastcgi.conf.default'
 
-	test -f '$(DESTDIR)../nginx/conf/uwsgi_params' 		|| cp conf/uwsgi_params '$(DESTDIR)../nginx/conf'
-	cp conf/uwsgi_params 		'$(DESTDIR)../nginx/conf/uwsgi_params.default'
+	test -f '$(DESTDIR)/root/github/nginx-study/nginx//conf/uwsgi_params' 		|| cp conf/uwsgi_params '$(DESTDIR)/root/github/nginx-study/nginx//conf'
+	cp conf/uwsgi_params 		'$(DESTDIR)/root/github/nginx-study/nginx//conf/uwsgi_params.default'
 
-	test -f '$(DESTDIR)../nginx/conf/scgi_params' 		|| cp conf/scgi_params '$(DESTDIR)../nginx/conf'
-	cp conf/scgi_params 		'$(DESTDIR)../nginx/conf/scgi_params.default'
+	test -f '$(DESTDIR)/root/github/nginx-study/nginx//conf/scgi_params' 		|| cp conf/scgi_params '$(DESTDIR)/root/github/nginx-study/nginx//conf'
+	cp conf/scgi_params 		'$(DESTDIR)/root/github/nginx-study/nginx//conf/scgi_params.default'
 
-	test -f '$(DESTDIR)../nginx/conf/nginx.conf' 		|| cp conf/nginx.conf '$(DESTDIR)../nginx/conf/nginx.conf'
-	cp conf/nginx.conf '$(DESTDIR)../nginx/conf/nginx.conf.default'
+	test -f '$(DESTDIR)/root/github/nginx-study/nginx//conf/nginx.conf' 		|| cp conf/nginx.conf '$(DESTDIR)/root/github/nginx-study/nginx//conf/nginx.conf'
+	cp conf/nginx.conf '$(DESTDIR)/root/github/nginx-study/nginx//conf/nginx.conf.default'
 
-	test -d '$(DESTDIR)../nginx/logs' 		|| mkdir -p '$(DESTDIR)../nginx/logs'
+	test -d '$(DESTDIR)/root/github/nginx-study/nginx//logs' 		|| mkdir -p '$(DESTDIR)/root/github/nginx-study/nginx//logs'
 
-	test -d '$(DESTDIR)../nginx/logs' || 		mkdir -p '$(DESTDIR)../nginx/logs'
+	test -d '$(DESTDIR)/root/github/nginx-study/nginx//logs' || 		mkdir -p '$(DESTDIR)/root/github/nginx-study/nginx//logs'
 
-	test -d '$(DESTDIR)../nginx/html' 		|| cp -R html '$(DESTDIR)../nginx'
+	test -d '$(DESTDIR)/root/github/nginx-study/nginx//html' 		|| cp -R html '$(DESTDIR)/root/github/nginx-study/nginx/'
 
-	test -d '$(DESTDIR)../nginx/logs' || 		mkdir -p '$(DESTDIR)../nginx/logs'
+	test -d '$(DESTDIR)/root/github/nginx-study/nginx//logs' || 		mkdir -p '$(DESTDIR)/root/github/nginx-study/nginx//logs'

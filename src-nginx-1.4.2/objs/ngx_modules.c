@@ -32,6 +32,7 @@ extern ngx_module_t  ngx_http_proxy_module;
 extern ngx_module_t  ngx_http_fastcgi_module;
 extern ngx_module_t  ngx_http_uwsgi_module;
 extern ngx_module_t  ngx_http_scgi_module;
+extern ngx_module_t  ngx_http_perl_module;
 extern ngx_module_t  ngx_http_memcached_module;
 extern ngx_module_t  ngx_http_empty_gif_module;
 extern ngx_module_t  ngx_http_browser_module;
@@ -84,6 +85,7 @@ ngx_module_t *ngx_modules[] = {
     &ngx_http_fastcgi_module,
     &ngx_http_uwsgi_module,
     &ngx_http_scgi_module,
+    &ngx_http_perl_module,
     &ngx_http_memcached_module,
     &ngx_http_empty_gif_module,
     &ngx_http_browser_module,
